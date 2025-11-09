@@ -7,6 +7,8 @@ package com.gestorpedidos.Controller;
 import com.gestorpedidos.Model.Pedido;
 import com.gestorpedidos.Model.Pedido.EstadoPedido;
 import com.gestorpedidos.Service.PedidoService;
+import com.gestorpedidos.Dto.EstadisticaMensualDTO;
+import com.gestorpedidos.Dto.EstadisticaClienteDTO;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -142,5 +144,18 @@ public class PedidoController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+    @GetMapping("/estadisticas")
+    public ResponseEntity<List<EstadisticaMensualDTO>> getEstadisticas() {
+        List<EstadisticaMensualDTO> stats = pedidoService.getEstadisticasMensuales();
+        return ResponseEntity.ok(stats);
+    }
+    // Dentro de la clase PedidoController
 
+// ... (El método getEstadisticas() que ya tenías) ...
+
+    @GetMapping("/estadisticas-clientes")
+    public ResponseEntity<List<EstadisticaClienteDTO>> getEstadisticasPorCliente() {
+        List<EstadisticaClienteDTO> stats = pedidoService.getEstadisticasPorCliente();
+        return ResponseEntity.ok(stats);
+    }
 }
