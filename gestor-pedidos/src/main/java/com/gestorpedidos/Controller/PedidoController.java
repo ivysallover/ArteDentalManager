@@ -4,7 +4,6 @@
 // ============================================
 package com.gestorpedidos.Controller;
 
-import com.gestorpedidos.Model.Pago;
 import com.gestorpedidos.Model.Pedido;
 import com.gestorpedidos.Model.Pedido.EstadoPedido;
 import com.gestorpedidos.Service.PedidoService;
@@ -14,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 

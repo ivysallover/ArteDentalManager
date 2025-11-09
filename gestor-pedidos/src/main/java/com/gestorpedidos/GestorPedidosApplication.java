@@ -1,8 +1,4 @@
 
-// ============================================
-// ARCHIVO 1: GestorPedidosApplication.java
-// Ubicación: src/main/java/com/gestorpedidos/
-// ============================================
 package com.gestorpedidos;
 
 import org.springframework.boot.SpringApplication;
@@ -30,7 +26,7 @@ public class GestorPedidosApplication {
 			@Override
 			public void addCorsMappings(CorsRegistry registry) {
 				registry.addMapping("/api/**")
-						.allowedOrigins("*") // <-- CAMBIA ESTO
+						.allowedOrigins("*")
 						.allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
 						.allowedHeaders("*");
 			}
