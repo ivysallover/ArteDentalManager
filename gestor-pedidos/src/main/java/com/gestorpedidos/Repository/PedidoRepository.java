@@ -1,7 +1,3 @@
-// ============================================
-// ARCHIVO: PedidoRepository.java
-// (Actualizado con filtros de fecha en las consultas)
-// ============================================
 package com.gestorpedidos.Repository;
 
 import com.gestorpedidos.Dto.EstadisticaClienteDTO;
@@ -20,7 +16,6 @@ import java.util.Optional;
 @Repository
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
 
-    // --- Métodos de Pedido (sin cambios) ---
     Optional<Pedido> findByNumeroPedido(String numeroPedido);
     List<Pedido> findByNombreClienteContainingIgnoreCase(String nombreCliente);
     List<Pedido> findByEstado(EstadoPedido estado);
@@ -34,26 +29,20 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     Optional<Pedido> findFirstByNombreClienteContainingIgnoreCaseOrderByFechaPedidoDesc(String nombre);
 
 
-    /**
-     * Consulta 1: Estadísticas Mensuales
-     * ¡ACTUALIZADO! Ahora acepta un rango de fechas.
-     */
+      //Consulta 1: Estadísticas Mensuales
     @Query("SELECT new com.gestorpedidos.Dto.EstadisticaMensualDTO(TO_CHAR(p.fechaPedido, 'YYYY-MM'), SUM(p.total)) " +
             "FROM Pedido p " +
             "WHERE p.estado = 'COMPLETADO' " +
-            "AND p.fechaPedido BETWEEN :inicio AND :fin " + // <-- LÍNEA MODIFICADA
+            "AND p.fechaPedido BETWEEN :inicio AND :fin " +
             "GROUP BY TO_CHAR(p.fechaPedido, 'YYYY-MM') " +
             "ORDER BY TO_CHAR(p.fechaPedido, 'YYYY-MM') DESC")
     List<EstadisticaMensualDTO> findEstadisticasMensuales(@Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
 
-    /**
-     * Consulta 2: Estadísticas por Cliente
-     * ¡ACTUALIZADO! Ahora acepta un rango de fechas.
-     */
+     //Consulta 2: Estadísticas por Cliente
     @Query("SELECT new com.gestorpedidos.Dto.EstadisticaClienteDTO(p.nombreCliente, SUM(p.total), COUNT(p)) " +
             "FROM Pedido p " +
             "WHERE p.estado = 'COMPLETADO' " +
-            "AND p.fechaPedido BETWEEN :inicio AND :fin " + // <-- LÍNEA MODIFICADA
+            "AND p.fechaPedido BETWEEN :inicio AND :fin " +
             "GROUP BY p.nombreCliente " +
             "ORDER BY SUM(p.total) DESC")
     List<EstadisticaClienteDTO> findEstadisticasPorCliente(@Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);

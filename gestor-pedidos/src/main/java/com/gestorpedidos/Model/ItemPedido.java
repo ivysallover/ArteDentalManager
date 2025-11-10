@@ -1,7 +1,3 @@
-// ============================================
-// ARCHIVO 3: ItemPedido.java
-// Ubicación: src/main/java/com/gestorpedidos/model/
-// ============================================
 package com.gestorpedidos.Model;
 
 import jakarta.persistence.*;

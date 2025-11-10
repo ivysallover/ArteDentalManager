@@ -1,4 +1,3 @@
-// Ubicación: src/main/java/com/gestorpedidos/repository/PagoRepository.java
 package com.gestorpedidos.Repository;
 
 import com.gestorpedidos.Model.Pago;

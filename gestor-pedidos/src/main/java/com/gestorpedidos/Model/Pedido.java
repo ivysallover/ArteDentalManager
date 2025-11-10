@@ -1,10 +1,6 @@
-// ============================================
-// ARCHIVO: Pedido.java (Actualizado con Normalización)
-// Ubicación: src/main/java/com/gestorpedidos/model/
-// ============================================
 package com.gestorpedidos.Model;
 
-import com.gestorpedidos.Util.StringUtils; // <-- ¡NUEVO IMPORT!
+import com.gestorpedidos.Util.StringUtils;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
@@ -19,7 +15,7 @@ public class Pedido {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ... (id, numeroPedido, etc. no cambian) ...
+
     @NotBlank(message = "El número de pedido es obligatorio")
     @Column(unique = true, nullable = false)
     private String numeroPedido;
@@ -30,7 +26,6 @@ public class Pedido {
 
     @Email(message = "Email inválido")
     private String emailCliente;
-    // ... (el resto de los campos no cambian) ...
     @NotBlank(message = "El teléfono es obligatorio")
     private String telefonoCliente;
 
@@ -52,7 +47,7 @@ public class Pedido {
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Pago> pagos = new ArrayList<>();
 
-    // Constructores y otros métodos (no cambian)
+
     public Pedido() {
         this.fechaPedido = LocalDateTime.now();
         this.estado = EstadoPedido.PENDIENTE;
@@ -60,27 +55,27 @@ public class Pedido {
     public Pedido(String numeroPedido, String nombreCliente, String emailCliente, String telefonoCliente) {
         this();
         this.numeroPedido = numeroPedido;
-        this.setNombreCliente(nombreCliente); // Usamos el setter para normalizar
+        this.setNombreCliente(nombreCliente);
         this.emailCliente = emailCliente;
         this.telefonoCliente = telefonoCliente;
     }
-    public void addItem(ItemPedido item) { /* ... (sin cambios) ... */
+    public void addItem(ItemPedido item) {
         items.add(item);
         item.setPedido(this);
         calcularTotal();
     }
-    public void removeItem(ItemPedido item) { /* ... (sin cambios) ... */
+    public void removeItem(ItemPedido item) {
         items.remove(item);
         item.setPedido(null);
         calcularTotal();
     }
-    public void calcularTotal() { /* ... (sin cambios) ... */
+    public void calcularTotal() {
         this.total = items.stream()
                 .mapToDouble(item -> item.getPrecioUnitario() * item.getCantidad())
                 .sum();
     }
 
-    // --- Getters y Setters ---
+
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -88,9 +83,8 @@ public class Pedido {
     public void setNumeroPedido(String numeroPedido) { this.numeroPedido = numeroPedido; }
     public String getNombreCliente() { return nombreCliente; }
 
-    // --- ¡MÉTODO MODIFICADO! ---
+
     public void setNombreCliente(String nombreCliente) {
-        // ¡Aquí ocurre la magia! Normalizamos el nombre antes de guardarlo.
         this.nombreCliente = StringUtils.normalizar(nombreCliente);
     }
 
@@ -113,7 +107,6 @@ public class Pedido {
         PENDIENTE, EN_PROCESO, COMPLETADO, CANCELADO
     }
 
-    // Métodos de Pagos y Deuda (sin cambios)
     public List<Pago> getPagos() { return pagos; }
     public void setPagos(List<Pago> pagos) { this.pagos = pagos; }
     public Double getDeuda() { /* ... (sin cambios) ... */

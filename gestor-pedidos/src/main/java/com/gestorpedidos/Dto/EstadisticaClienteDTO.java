@@ -1,5 +1,3 @@
-// Ubicación: com/gestorpedidos/Dto/EstadisticaClienteDTO.java
-
 package com.gestorpedidos.Dto;
 
 public class EstadisticaClienteDTO {
@@ -13,7 +11,7 @@ public class EstadisticaClienteDTO {
         this.totalFacturado = totalFacturado;
         this.totalPedidos = totalPedidos;
     }
-    // ... (Getters y Setters) ...
+
     public String getNombreCliente() { return nombreCliente; }
     public Double getTotalFacturado() { return totalFacturado; }
     public Long getTotalPedidos() { return totalPedidos; }

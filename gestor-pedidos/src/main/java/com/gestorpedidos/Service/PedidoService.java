@@ -1,7 +1,3 @@
-// ============================================
-// ARCHIVO: PedidoService.java (¡ACTUALIZADO!)
-// (Este archivo reemplaza tu PedidoService.java original)
-// ============================================
 package com.gestorpedidos.Service;
 
 import com.gestorpedidos.Dto.EstadisticaClienteDTO;
@@ -44,7 +40,6 @@ public class PedidoService {
         if (pedido.getEstado() == null) { pedido.setEstado(EstadoPedido.PENDIENTE); }
         if (pedido.getItems() != null) { pedido.getItems().forEach(item -> item.setPedido(pedido)); }
         pedido.calcularTotal();
-        // La normalización ocurre en el setter de Pedido.java
         return pedidoRepository.save(pedido);
     }
 
@@ -115,7 +110,6 @@ public class PedidoService {
         return pedidoRepository.findFirstByNombreClienteContainingIgnoreCaseOrderByFechaPedidoDesc(nombreNormalizado);
     }
 
-    // --- MÉTODOS DE ESTADÍSTICAS (¡ACTUALIZADOS!) ---
 
     public List<EstadisticaMensualDTO> getEstadisticasMensuales(LocalDateTime inicio, LocalDateTime fin) {
         return pedidoRepository.findEstadisticasMensuales(inicio, fin);

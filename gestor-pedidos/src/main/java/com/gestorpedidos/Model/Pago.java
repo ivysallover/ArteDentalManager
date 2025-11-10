@@ -28,7 +28,6 @@ public class Pago {
         this.fecha = LocalDateTime.now();
     }
 
-    // --- Enum para los métodos de pago ---
     public enum MetodoPago {
         EFECTIVO,
         TRANSFERENCIA,
@@ -37,7 +36,6 @@ public class Pago {
         OTRO
     }
 
-    // --- Getters y Setters ---
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

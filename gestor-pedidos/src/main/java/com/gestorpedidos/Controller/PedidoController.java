@@ -1,7 +1,4 @@
-// ============================================
-// ARCHIVO: PedidoController.java (¡ACTUALIZADO!)
-// (Este archivo reemplaza tu PedidoController.java original)
-// ============================================
+
 package com.gestorpedidos.Controller;
 
 import com.gestorpedidos.Dto.EstadisticaClienteDTO;
@@ -27,7 +24,6 @@ public class PedidoController {
     @Autowired
     private PedidoService pedidoService;
 
-    // --- Métodos de Pedido (con corrección en cambiarEstado) ---
     @GetMapping
     public ResponseEntity<List<Pedido>> obtenerTodos() { return ResponseEntity.ok(pedidoService.obtenerTodos()); }
 
@@ -64,20 +60,14 @@ public class PedidoController {
     @PostMapping("/{id}/pagos")
     public ResponseEntity<Pedido> registrarPago(@PathVariable Long id, @RequestBody Map<String, Object> payload) { try { Pedido pedidoActualizado = pedidoService.registrarPago(id, payload); return ResponseEntity.ok(pedidoActualizado); } catch (RuntimeException e) { return ResponseEntity.badRequest().body(null); } }
 
-    // Dentro de PedidoController.java
-
     @GetMapping("/buscar-cliente-data")
     public ResponseEntity<Pedido> buscarDatosCliente(@RequestParam String nombre) {
-        // Corrección: Usar el Optional directamente para devolver 404 si no existe
         return pedidoService.buscarDatosCliente(nombre)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> manejarExcepciones(Exception e) { return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage())); }
-
-
-    // --- MÉTODOS DE ESTADÍSTICAS (¡ACTUALIZADOS!) ---
 
     @GetMapping("/estadisticas")
     public ResponseEntity<List<EstadisticaMensualDTO>> getEstadisticas(
