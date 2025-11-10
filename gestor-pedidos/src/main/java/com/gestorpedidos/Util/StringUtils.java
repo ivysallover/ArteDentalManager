@@ -1,6 +1,6 @@
 // ============================================
 // ARCHIVO NUEVO: StringUtils.java
-// Ubicación: src/main/java/com/gestorpedidos/util/
+// Ubicación: com/gestorpedidos/Util/
 // ============================================
 package com.gestorpedidos.Util;
 
@@ -23,7 +23,6 @@ public class StringUtils {
         textoNormalizado = Normalizer.normalize(textoNormalizado, Normalizer.Form.NFD);
 
         // 3. Quitar los caracteres de tildes (diacríticos)
-        // \p{InCombiningDiacriticalMarks} es la magia que busca tildes, etc.
         textoNormalizado = textoNormalizado.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
 
         // 4. Quitar espacios al inicio y al final
