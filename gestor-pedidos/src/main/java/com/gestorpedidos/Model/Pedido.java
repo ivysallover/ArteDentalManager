@@ -103,9 +103,6 @@ public class Pedido {
     public String getObservaciones() { return observaciones; }
     public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
 
-    public enum EstadoPedido { /* ... (sin cambios) ... */
-        PENDIENTE, EN_PROCESO, COMPLETADO, CANCELADO
-    }
 
     public List<Pago> getPagos() { return pagos; }
     public void setPagos(List<Pago> pagos) { this.pagos = pagos; }

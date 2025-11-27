@@ -28,15 +28,6 @@ public class Pago {
         this.fecha = LocalDateTime.now();
     }
 
-    public enum MetodoPago {
-        EFECTIVO,
-        TRANSFERENCIA,
-        TARJETA_DEBITO,
-        TARJETA_CREDITO,
-        OTRO
-    }
-
-
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Pedido getPedido() { return pedido; }

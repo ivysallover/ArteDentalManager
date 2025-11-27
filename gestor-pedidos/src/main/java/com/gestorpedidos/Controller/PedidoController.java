@@ -3,9 +3,8 @@ package com.gestorpedidos.Controller;
 
 import com.gestorpedidos.Dto.EstadisticaClienteDTO;
 import com.gestorpedidos.Dto.EstadisticaMensualDTO;
-import com.gestorpedidos.Model.Pago;
 import com.gestorpedidos.Model.Pedido;
-import com.gestorpedidos.Model.Pedido.EstadoPedido;
+import com.gestorpedidos.Model.EstadoPedido;
 import com.gestorpedidos.Service.PedidoService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;

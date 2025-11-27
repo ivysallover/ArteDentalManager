@@ -3,8 +3,9 @@ package com.gestorpedidos.Service;
 import com.gestorpedidos.Dto.EstadisticaClienteDTO;
 import com.gestorpedidos.Dto.EstadisticaMensualDTO;
 import com.gestorpedidos.Model.Pago;
+import com.gestorpedidos.Model.MetodoPago;
 import com.gestorpedidos.Model.Pedido;
-import com.gestorpedidos.Model.Pedido.EstadoPedido;
+import com.gestorpedidos.Model.EstadoPedido;
 import com.gestorpedidos.Repository.PagoRepository;
 import com.gestorpedidos.Repository.PedidoRepository;
 import com.gestorpedidos.Util.StringUtils;
@@ -27,7 +28,7 @@ public class PedidoService {
     @Autowired
     private PagoRepository pagoRepository;
 
-    // --- Métodos de Pedido (con normalización) ---
+
     public List<Pedido> obtenerTodos() { return pedidoRepository.findAll(); }
     public Optional<Pedido> obtenerPorId(Long id) { return pedidoRepository.findById(id); }
     public Optional<Pedido> obtenerPorNumero(String numeroPedido) { return pedidoRepository.findByNumeroPedido(numeroPedido); }
@@ -46,7 +47,7 @@ public class PedidoService {
     public Pedido actualizarPedido(Long id, Pedido pedidoActualizado) {
         return pedidoRepository.findById(id)
                 .map(pedido -> {
-                    pedido.setNombreCliente(pedidoActualizado.getNombreCliente()); // Se normaliza aquí
+                    pedido.setNombreCliente(pedidoActualizado.getNombreCliente());
                     pedido.setEmailCliente(pedidoActualizado.getEmailCliente());
                     pedido.setTelefonoCliente(pedidoActualizado.getTelefonoCliente());
                     pedido.setEstado(pedidoActualizado.getEstado());
@@ -97,10 +98,10 @@ public class PedidoService {
         String metodoPagoStr = payload.get("metodoPago").toString();
         nuevoPago.setPedido(pedido);
         nuevoPago.setMonto(monto);
-        nuevoPago.setMetodoPago(Pago.MetodoPago.valueOf(metodoPagoStr));
+        nuevoPago.setMetodoPago(MetodoPago.valueOf(metodoPagoStr));
         pedido.getPagos().add(nuevoPago);
         if (pedido.getDeuda() < 0.01) {
-            pedido.setEstado(Pedido.EstadoPedido.COMPLETADO);
+            pedido.setEstado(EstadoPedido.COMPLETADO);
         }
         return pedidoRepository.save(pedido);
     }
