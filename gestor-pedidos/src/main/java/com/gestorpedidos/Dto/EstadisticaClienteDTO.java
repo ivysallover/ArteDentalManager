@@ -2,9 +2,9 @@ package com.gestorpedidos.Dto;
 
 public class EstadisticaClienteDTO {
 
-    private String nombreCliente;
-    private Double totalFacturado;
-    private Long totalPedidos;
+    private final String nombreCliente;
+    private final Double totalFacturado;
+    private final Long totalPedidos;
 
     public EstadisticaClienteDTO(String nombreCliente, Double totalFacturado, Long totalPedidos) {
         this.nombreCliente = nombreCliente;

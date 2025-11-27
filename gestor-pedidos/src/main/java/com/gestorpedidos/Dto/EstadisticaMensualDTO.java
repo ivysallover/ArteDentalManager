@@ -2,8 +2,8 @@ package com.gestorpedidos.Dto;
 
 public class EstadisticaMensualDTO {
 
-    private String mes;
-    private Double total;
+    private final String mes;
+    private final Double total;
 
     public EstadisticaMensualDTO(String mes, Double total) {
         this.mes = mes;

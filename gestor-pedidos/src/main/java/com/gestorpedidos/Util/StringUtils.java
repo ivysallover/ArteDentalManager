@@ -1,5 +1,4 @@
 package com.gestorpedidos.Util;
-
 import java.text.Normalizer;
 
 public class StringUtils {
@@ -9,11 +8,8 @@ public class StringUtils {
             return null;
         }
         String textoNormalizado = texto.toLowerCase();
-
         textoNormalizado = Normalizer.normalize(textoNormalizado, Normalizer.Form.NFD);
-
         textoNormalizado = textoNormalizado.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
-
         return textoNormalizado.trim();
     }
 }
