@@ -52,13 +52,6 @@ public class Pedido {
         this.fechaPedido = LocalDateTime.now();
         this.estado = EstadoPedido.PENDIENTE;
     }
-    public Pedido(String numeroPedido, String nombreCliente, String emailCliente, String telefonoCliente) {
-        this();
-        this.numeroPedido = numeroPedido;
-        this.setNombreCliente(nombreCliente);
-        this.emailCliente = emailCliente;
-        this.telefonoCliente = telefonoCliente;
-    }
     public void addItem(ItemPedido item) {
         items.add(item);
         item.setPedido(this);
@@ -97,7 +90,6 @@ public class Pedido {
     public LocalDateTime getFechaPedido() { return fechaPedido; }
     public void setFechaPedido(LocalDateTime fechaPedido) { this.fechaPedido = fechaPedido; }
     public Double getTotal() { return total; }
-    public void setTotal(Double total) { this.total = total; }
     public List<ItemPedido> getItems() { return items; }
     public void setItems(List<ItemPedido> items) { this.items = items; }
     public String getObservaciones() { return observaciones; }
