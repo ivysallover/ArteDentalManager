@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Gestor de Pedidos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+
+    // === INICIO DEL CÓDIGO ===
+
+    // Iconos
+    const X = () => '❌'; const Plus = () => '➕'; const Edit2 = () => '✏️'; const Trash2 = () => '🗑️'; const Search = () => '🔍'; const Package = () => '📦'; const Clock = () => '🕒'; const CheckCircle = () => '✅'; const XCircle = () => '❌'; const Money = () => '💵'; const UserIcon = () => '👤'; const ChartIcon = () => '📊'; const ListIcon = () => '📋';
+
+    const { useState, useEffect, useRef } = React;
+    const API_URL = 'http://localhost:8080/api/pedidos';
+
+    // Constantes
+    const ESTADOS = { PENDIENTE: { label: 'Pendiente', color: 'bg-yellow-500', icon: Clock }, EN_PROCESO: { label: 'En Proceso', color: 'bg-blue-500', icon: Package }, COMPLETADO: { label: 'Completado', color: 'bg-green-500', icon: CheckCircle }, CANCELADO: { label: 'Cancelado', color: 'bg-red-500', icon: XCircle } };
+    const METODOS_PAGO = { EFECTIVO: "Efectivo", TRANSFERENCIA: "Transferencia", TARJETA_DEBITO: "Tarjeta de Débito", TARJETA_CREDITO: "Tarjeta de Crédito", OTRO: "Otro" };
+
+    // --- Funciones "Ayudante" ---
+    function normalizarTexto(texto) { if (!texto) return ''; return texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim(); }
+    function formatarFecha(fechaString) { if (!fechaString) return 'N/A'; return new Date(fechaString).toLocaleString('es-AR', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+
+    function getRangoFechas(rangoKey) {
+        const ahora = new Date();
+        let inicio = new Date();
+        let fin = new Date(ahora);
+
+        switch (rangoKey) {
+            case 'ESTE_MES': inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0); break;
+            case 'MES_PASADO': inicio = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1, 0, 0, 0); fin = new Date(ahora.getFullYear(), ahora.getMonth(), 0, 23, 59, 59); break;
+            case 'ESTE_ANO': inicio = new Date(ahora.getFullYear(), 0, 1, 0, 0, 0); break;
+            case 'TODOS': default: inicio = new Date(1970, 0, 1, 0, 0, 0); break;
+        }
+
+        const offset = inicio.getTimezoneOffset() * 60000;
+        const inicioISO = new Date(inicio.getTime() - offset).toISOString().slice(0, 19);
+        const finISO = new Date(fin.getTime() - offset).toISOString().slice(0, 19);
+
+        return { inicio: inicioISO, fin: finISO };
+    }
+
+    // --- Componentes de UI ---
+
+    function BotonPestaña({ titulo, icono, activo, onClick }) {
+      const Icono = icono; const clasesBase = "py-4 px-6 font-semibold text-lg cursor-pointer transition-colors flex items-center gap-2"; const clasesActivo = "border-b-4 border-indigo-600 text-indigo-600"; const clasesInactivo = "text-gray-500 hover:text-gray-800 border-b-4 border-transparent";
+      return ( <button onClick={onClick} className={`${clasesBase} ${activo ? clasesActivo : clasesInactivo}`}> <Icono /> {titulo} </button> );
+    }
+
+    function BotonFiltroFecha({ label, onClick, activo }) {
+        const clasesBase = "px-4 py-2 rounded-lg font-semibold transition-colors";
+        const clasesActivo = "bg-indigo-600 text-white";
+        const clasesInactivo = "bg-white hover:bg-indigo-100 text-indigo-700";
+        return (
+            <button onClick={onClick} className={`${clasesBase} ${activo ? clasesActivo : clasesInactivo}`}>
+                {label}
+            </button>
+        );
+    }
+
+    // --- Componente de Gráfico (Ventas por Mes) ---
+    function GraficoDeBarras({ datos, titulo }) {
+      const canvasRef = useRef(null);
+      const chartRef = useRef(null);
+
+      function formatarMes(mesString) {
+        const [año, mes] = mesString.split('-');
+        const fecha = new Date(año, mes - 1, 1);
+        return fecha.toLocaleString('es-AR', { month: 'long', year: 'numeric' });
+      }
+
+      useEffect(() => {
+        if (canvasRef.current && window.Chart && datos && datos.length > 0) {
+          const datosInvertidos = [...datos].reverse();
+          const labels = datosInvertidos.map(item => formatarMes(item.mes));
+          const valores = datosInvertidos.map(item => item.total ?? 0);
+
+          if (chartRef.current) chartRef.current.destroy();
+
+          const ctx = canvasRef.current.getContext('2d');
+          chartRef.current = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: 'Total Facturado',
+                data: valores,
+                backgroundColor: 'rgba(79, 70, 229, 0.8)',
+                borderColor: 'rgba(79, 70, 229, 1)',
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: { y: { beginAtZero: true, ticks: { callback: function(value) { return '$' + value.toLocaleString('es-AR'); } } } },
+              plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: function(context) { return 'Total: $' + context.parsed.y.toLocaleString('es-AR'); } } }
+              }
+            }
+          });
+        }
+        return () => { if (chartRef.current) chartRef.current.destroy(); };
+      }, [datos]);
+
+      if (!datos || datos.length === 0) return null;
+
+      return (
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+          <h3 className="text-2xl font-bold text-gray-800 mb-4">{titulo}</h3>
+          <canvas ref={canvasRef}></canvas>
+        </div>
+      );
+    }
+
+    // --- Gráfico de Ranking de Clientes (Horizontal) ---
+    function GraficoClientes({ datos }) {
+      const canvasRef = useRef(null);
+      const chartRef = useRef(null);
+
+      useEffect(() => {
+        if (canvasRef.current && window.Chart && datos && datos.length > 0) {
+          const datosOrdenados = [...datos].sort((a, b) => (a.totalFacturado ?? 0) - (b.totalFacturado ?? 0));
+          const labels = datosOrdenados.map(item => item.nombreCliente.toUpperCase());
+          const valores = datosOrdenados.map(item => item.totalFacturado ?? 0);
+
+          if (chartRef.current) chartRef.current.destroy();
+
+          const ctx = canvasRef.current.getContext('2d');
+          chartRef.current = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: 'Facturación Total',
+                data: valores,
+                backgroundColor: 'rgba(239, 68, 68, 0.7)', // Color Rojo
+                borderColor: 'rgba(239, 68, 68, 1)',
+                borderWidth: 1
+              }]
+            },
+            options: {
+              indexAxis: 'y', // <-- ¡Esto lo hace horizontal!
+              responsive: true,
+              scales: { x: { beginAtZero: true, ticks: { callback: function(value) { return '$' + value.toLocaleString('es-AR'); } } } },
+              plugins: {
+                legend: { display: false },
+                title: { display: true, text: 'Facturación por Cliente' }
+              }
+            }
+          });
+        }
+        return () => { if (chartRef.current) chartRef.current.destroy(); };
+      }, [datos]);
+
+      if (!datos || datos.length === 0) return null;
+
+      return (
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+          <h3 className="text-2xl font-bold text-gray-800 mb-4">Ranking de Clientes</h3>
+          <canvas ref={canvasRef}></canvas>
+        </div>
+      );
+    }
+
+    // --- VISTA DE ESTADÍSTICAS ---
+    function VistaEstadisticas({ rangoFecha }) {
+      const [statsMes, setStatsMes] = useState([]);
+      const [statsCliente, setStatsCliente] = useState([]);
+      const [cargando, setCargando] = useState(true);
+      const [error, setError] = useState('');
+
+      function formatarMes(mesString) {
+        const [año, mes] = mesString.split('-');
+        const fecha = new Date(año, mes - 1, 1);
+        return fecha.toLocaleString('es-AR', { month: 'long', year: 'numeric' });
+      }
+
+      useEffect(() => {
+        const cargarTodasStats = async () => {
+          if (!window.Chart) {
+             setError("Error al cargar la librería de gráficos. Revisa la conexión a internet y refresca la página.");
+             setCargando(false);
+             return;
+          }
+          setCargando(true);
+          setError('');
+          try {
+            const { inicio, fin } = getRangoFechas(rangoFecha);
+            const urlMes = `${API_URL}/estadisticas?inicio=${inicio}&fin=${fin}`;
+            const urlCliente = `${API_URL}/estadisticas-clientes?inicio=${inicio}&fin=${fin}`;
+
+            const [resMes, resCliente] = await Promise.all([
+              fetch(urlMes),
+              fetch(urlCliente)
+            ]);
+
+            if (!resMes.ok) throw new Error(`Error al cargar estadísticas mensuales (Código: ${resMes.status}).`);
+            if (!resCliente.ok) throw new Error(`Error al cargar estadísticas de clientes (Código: ${resCliente.status}).`);
+
+            const dataMes = await resMes.json();
+            const dataCliente = await resCliente.json();
+
+            setStatsMes(dataMes);
+            setStatsCliente(dataCliente);
+
+          } catch (err) {
+            console.error(err);
+            setError(err.message);
+          } finally {
+            setCargando(false);
+          }
+        };
+
+        cargarTodasStats();
+      }, [rangoFecha]);
+
+      const totalGeneralMes = statsMes.reduce((sum, item) => sum + (item.total ?? 0), 0);
+
+      if (cargando) {
+        return (
+          <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            <p className="mt-4 text-gray-600">Calculando estadísticas...</p>
+          </div>
+        );
+      }
+
+      if (error) {
+        return (
+          <div className="bg-white rounded-2xl shadow-xl p-12 text-center text-red-600">
+            <h2 className="text-2xl font-bold mb-4">Error al Cargar</h2>
+            <p className="text-sm">{error}</p>
+          </div>
+        );
+      }
+
+      if (statsMes.length === 0 && statsCliente.length === 0) {
+        return (
+          <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+            <div className="mx-auto text-gray-400 mb-4 text-6xl"><ChartIcon /></div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Sin Datos</h3>
+            <p className="text-gray-600">No hay pedidos completados en este período para mostrar estadísticas.</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="space-y-6">
+          <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+             <ChartIcon /> Dashboard de Estadísticas
+          </h2>
+
+          <GraficoDeBarras datos={statsMes} titulo="Ventas por Mes" />
+          <GraficoClientes datos={statsCliente} />
+
+          {statsCliente.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              <h3 className="text-2xl font-bold text-gray-800 mb-4">Ranking de Clientes (Detalle)</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Facturado</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pedidos Completados</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {statsCliente.map((item) => (
+                      <tr key={item.nombreCliente} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-lg font-medium text-gray-900 capitalize">{item.nombreCliente}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-lg text-indigo-600 font-bold">${(item.totalFacturado ?? 0).toFixed(2)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-lg text-gray-700">{item.totalPedidos}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {statsMes.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              <h3 className="text-2xl font-bold text-gray-800 mb-4">Facturación por Mes (Detalle)</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mes</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Facturado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {statsMes.map((item) => (
+                      <tr key={item.mes} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-lg font-medium text-gray-900 capitalize">{formatarMes(item.mes)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-lg text-gray-700">${(item.total ?? 0).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-100">
+                    <tr>
+                      <td className="px-6 py-4 text-left text-base font-bold text-gray-900 uppercase">Total General</td>
+                      <td className="px-6 py-4 text-left text-xl font-bold text-indigo-600">${totalGeneralMes.toFixed(2)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // --- Componente Principal ---
+    function GestorPedidos() {
+      const [pedidos, setPedidos] = useState([]);
+      const [filtro, setFiltro] = useState('');
+      const [pestañaActual, setPestañaActual] = useState('PEDIDOS');
+      const [mostrarModal, setMostrarModal] = useState(false);
+      const [pedidoActual, setPedidoActual] = useState(null);
+      const [cargando, setCargando] = useState(false);
+      const [modalPago, setModalPago] = useState({ visible: false, pedido: null });
+      const [rangoFecha, setRangoFecha] = useState('ESTE_MES');
+
+      // nuevo estado para capturar errores al cargar pedidos
+      const [errorCarga, setErrorCarga] = useState('');
+
+      useEffect(() => { cargarPedidos(); }, []);
+
+      // === versión robusta de cargarPedidos() ===
+      const cargarPedidos = async () => {
+        setCargando(true);
+        setErrorCarga('');
+        try {
+          const response = await fetch(API_URL);
+
+          if (!response.ok) {
+            console.warn("⚠️ Backend responded with status:", response.status);
+            // leer body si es JSON para información extra (no obligatorio)
+            try {
+              const errBody = await response.json().catch(()=>null);
+              if (errBody) console.warn("Backend body:", errBody);
+            } catch(e) {}
+            setPedidos([]); // garantizar que sea array
+            setErrorCarga(`No se pudo cargar pedidos (HTTP ${response.status}).`);
+            return;
+          }
+
+          const data = await response.json();
+
+          if (!Array.isArray(data)) {
+            console.warn("⚠️ Respuesta inesperada (no es array):", data);
+            setPedidos([]);
+            setErrorCarga("Respuesta inválida del servidor al solicitar pedidos.");
+            return;
+          }
+
+          setPedidos(data);
+          setErrorCarga('');
+        } catch (error) {
+          console.error('Error al cargar pedidos:', error);
+          setPedidos([]);
+          setErrorCarga('Error al conectar con el servidor.');
+        } finally {
+          setCargando(false);
+        }
+      };
+
+      const eliminarPedido = async (id) => { if (!confirm('¿Estás seguro de eliminar este pedido?')) return; try { await fetch(`${API_URL}/${id}`, { method: 'DELETE' }); cargarPedidos(); } catch (error) { console.error('Error al eliminar:', error); alert('Error al eliminar el pedido'); } };
+      const cambiarEstado = async (id, nuevoEstado) => { try { await fetch(`${API_URL}/${id}/estado`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: nuevoEstado }) }); cargarPedidos(); } catch (error) { console.error('Error al cambiar estado:', error); } };
+      const handleRegistrarPago = async (pedidoId, nuevoPago) => { try { const response = await fetch(`${API_URL}/${pedidoId}/pagos`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nuevoPago) }); if (!response.ok) throw new Error('Error del servidor'); await cargarPedidos(); cerrarModalPago(); } catch (error) { console.error("Error al registrar pago:", error); alert("No se pudo registrar el pago."); } };
+      const abrirModalPago = (pedido) => setModalPago({ visible: true, pedido: pedido });
+      const cerrarModalPago = () => setModalPago({ visible: false, pedido: null });
+      const abrirModal = (pedido = null) => { setPedidoActual(pedido); setMostrarModal(true); };
+      const cerrarModal = () => { setPedidoActual(null); setMostrarModal(false); };
+
+      const filtroNombreNormalizado = normalizarTexto(filtro); const filtroTextoOriginal = filtro.toLowerCase();
+      const pedidosFiltrados = Array.isArray(pedidos) ? pedidos.filter(p => {
+        if (pestañaActual === 'PEDIDOS' && (p.estado === 'COMPLETADO' || p.estado === 'CANCELADO')) return false;
+        if (pestañaActual === 'COMPLETOS' && (p.estado !== 'COMPLETADO' && p.estado !== 'CANCELADO')) return false;
+        const cumpleFiltroNombre = (p.nombreCliente || '').toLowerCase().includes(filtroNombreNormalizado);
+        const cumpleFiltroNumero = (p.numeroPedido || '').toLowerCase().includes(filtroTextoOriginal);
+        return cumpleFiltroNombre || cumpleFiltroNumero;
+      }) : [];
+
+      // CORRECCIÓN en agrupamiento: usar 'pedido' en vez de 'p'
+      const pedidosAgrupados = pedidosFiltrados.reduce((grupos, pedido) => {
+        const cliente = pedido.nombreCliente || 'Sin Nombre';
+        if (!grupos[cliente]) { grupos[cliente] = { pedidos: [], deudaTotalCliente: 0 }; }
+        grupos[cliente].pedidos.push(pedido);
+        grupos[cliente].deudaTotalCliente += (pedido.deuda ?? 0);
+        return grupos;
+      }, {});
+
+      const gruposDeClientes = Object.entries(pedidosAgrupados).map(([nombre, data]) => ({ nombreCliente: nombre, ...data })).sort((a, b) => a.nombreCliente.localeCompare(b.nombreCliente));
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+              <div className="flex items-center justify-between">
+                <div><h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center gap-3"><Package /> Gestor de Pedidos</h1><p className="text-gray-600">Sistema de gestión de pedidos para ArteDental</p></div>
+                <img src="http://localhost:8080/logo.png" alt="Logo de la Empresa" className="h-[90px] w-auto" onError={(e)=>{e.target.style.display='none'}} />
+              </div>
+            </div>
+            <div className="mb-6">
+              <div className="flex border-b border-gray-300 bg-white/50 rounded-t-lg shadow-sm">
+                <BotonPestaña titulo="Pedidos Activos" icono={ListIcon} activo={pestañaActual === 'PEDIDOS'} onClick={() => setPestañaActual('PEDIDOS')} />
+                <BotonPestaña titulo="Pedidos Completos" icono={CheckCircle} activo={pestañaActual === 'COMPLETOS'} onClick={() => setPestañaActual('COMPLETOS')} />
+                <BotonPestaña titulo="Estadísticas" icono={ChartIcon} activo={pestañaActual === 'ESTADISTICAS'} onClick={() => setPestañaActual('ESTADISTICAS')} />
+              </div>
+            </div>
+
+            {pestañaActual !== 'ESTADISTICAS' && (
+              <>
+                <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 relative">
+                      <span className="absolute left-3 top-3.5 text-gray-400"><Search /></span>
+                      <input type="text" placeholder="Buscar por cliente o número de pedido..." className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
+                    </div>
+                    <button onClick={() => abrirModal()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors">
+                      <Plus /> Nuevo Pedido
+                    </button>
+                  </div>
+
+                  {/* Mostrar error de carga si existe */}
+                  {errorCarga && (
+                    <div className="mt-4 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg">
+                      <strong>⚠️ Error cargando pedidos:</strong> {errorCarga}
+                      <div className="mt-2 text-sm text-gray-600">Reintentá actualizar con el botón "Actualizar" o revisá tu backend.</div>
+                      <div className="mt-2">
+                        <button onClick={() => cargarPedidos()} className="text-sm px-3 py-1 bg-red-600 text-white rounded-md">Reintentar</button>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+                {cargando ? ( <div className="text-center py-12"> <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div> <p className="mt-4 text-gray-600">Cargando pedidos...</p> </div>
+                ) : gruposDeClientes.length === 0 ? ( <div className="bg-white rounded-2xl shadow-xl p-12 text-center"> <div className="mx-auto text-gray-400 mb-4 text-6xl"><Package /></div> <h3 className="text-2xl font-bold text-gray-800 mb-2">No hay pedidos</h3> <p className="text-gray-600">No se encontraron pedidos en esta sección.</p> </div>
+                ) : (
+                  <div className="space-y-6">
+                    {gruposDeClientes.map((grupo) => (
+                      <div key={grupo.nombreCliente} className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg p-6">
+                        <div className="flex justify-between items-center mb-4 pb-4 border-b">
+                          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><UserIcon /> {grupo.nombreCliente}</h2>
+                          <div className="text-right"><p className="text-sm text-gray-600">Deuda Total del Cliente</p><p className={`text-2xl font-bold ${grupo.deudaTotalCliente > 0.01 ? 'text-red-600' : 'text-green-600'}`}> ${grupo.deudaTotalCliente.toFixed(2)}</p></div>
+                        </div>
+                        <div className="grid gap-4">
+                          {grupo.pedidos.map((pedido) => (
+                            <TarjetaPedido key={pedido.id} pedido={pedido} onEditar={() => abrirModal(pedido)} onEliminar={() => eliminarPedido(pedido.id)} onCambiarEstado={cambiarEstado} onAbrirPago={() => abrirModalPago(pedido)} />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {pestañaActual === 'ESTADISTICAS' && (
+              <>
+                <div className="bg-white rounded-2xl shadow-xl p-4 mb-6 flex justify-center gap-2">
+                  <BotonFiltroFecha label="Este Mes" onClick={() => setRangoFecha('ESTE_MES')} activo={rangoFecha === 'ESTE_MES'} />
+                  <BotonFiltroFecha label="Mes Pasado" onClick={() => setRangoFecha('MES_PASADO')} activo={rangoFecha === 'MES_PASADO'} />
+                  <BotonFiltroFecha label="Este Año" onClick={() => setRangoFecha('ESTE_ANO')} activo={rangoFecha === 'ESTE_ANO'} />
+                  <BotonFiltroFecha label="Histórico" onClick={() => setRangoFecha('TODOS')} activo={rangoFecha === 'TODOS'} />
+                </div>
+
+                <VistaEstadisticas rangoFecha={rangoFecha} />
+              </>
+            )}
+
+            {mostrarModal && ( <ModalPedido pedido={pedidoActual} onCerrar={cerrarModal} onGuardar={cargarPedidos} /> )}
+            {modalPago.visible && ( <ModalPago pedido={modalPago.pedido} onCerrar={cerrarModalPago} onGuardarPago={handleRegistrarPago} /> )}
+          </div>
+        </div>
+      );
+    }
+
+    // --- Componente TarjetaPedido (¡CORREGIDO!) ---
+    function TarjetaPedido({ pedido, onEditar, onEliminar, onCambiarEstado, onAbrirPago }) {
+      const estadoInfo = ESTADOS[pedido.estado] || ESTADOS.PENDIENTE;
+      const IconoEstado = estadoInfo.icon; const deuda = pedido.deuda ?? 0;
+      return ( <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-2xl transition-shadow"> <div className="flex items-start justify-between"> <div className="flex-1"> <div className="flex items-center gap-3 mb-2"> <h3 className="text-lg font-bold text-gray-800">{pedido.numeroPedido}</h3> <span className={`${estadoInfo.color} text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1`}> <IconoEstado /> {estadoInfo.label} </span> </div> <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-sm"> <div><p className="text-gray-600">Fecha</p><p className="font-semibold text-gray-800">{formatarFecha(pedido.fechaPedido)}</p></div> <div className="col-span-2 md:col-span-1"> <p className="text-gray-600">Email</p> <a href={`mailto:${pedido.emailCliente}`} className="font-semibold text-blue-600 hover:underline truncate block"> {pedido.emailCliente} </a> </div> <div><p className="text-gray-600">Teléfono</p><p className="font-semibold text-gray-800">{pedido.telefonoCliente}</p></div> <div className="font-bold col-span-2 md:col-span-1"> <p className="text-gray-600">Deuda del Pedido</p> <p className={`text-lg ${deuda > 0.01 ? 'text-red-600' : 'text-green-600'}`}>${deuda.toFixed(2)}</p> </div> </div> {pedido.items && pedido.items.length > 0 && ( <div className="mt-3 pt-3 border-t"> <p className="text-gray-600 text-sm mb-1">Items ({pedido.items.length})</p> <div className="space-y-1">{pedido.items.map((item, idx) => (<p key={idx} className="text-xs text-gray-700">• {item.nombreProducto} ({item.cantidad}x)</p>))}</div> </div> )} {pedido.pagos && pedido.pagos.length > 0 && ( <div className="mt-3 pt-3 border-t"> <p className="text-gray-600 text-sm mb-1">Pagos ({pedido.pagos.length})</p> <div className="space-y-1">{pedido.pagos.map((pago) => (<p key={pago.id} className="text-xs text-green-700">• ${(pago.monto ?? 0).toFixed(2)}<span className="text-gray-500"> ({METODOS_PAGO[pago.metodoPago]})</span></p>))}</div> </div> )} </div> <div className="flex flex-col gap-2 ml-4"> <button onClick={onAbrirPago} className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex justify-center items-center gap-1 text-sm"><Money /> Pagar</button> <button onClick={onEditar} className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex justify-center"><Edit2 /></button> <button onClick={onEliminar} className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex justify-center"><Trash2 /></button> </div> </div> </div> );
+    }
+
+    // --- Componente ModalPedido ---
+    function ModalPedido({ pedido, onCerrar, onGuardar }) {
+      const [form, setForm] = useState(() => { if (pedido) return pedido; return { numeroPedido: '', nombreCliente: '', emailCliente: '', telefonoCliente: '', estado: 'PENDIENTE', observaciones: '', items: [] }; });
+      const [emailError, setEmailError] = useState('');
+      useEffect(() => { if (!pedido) { generarNumeroPedido(); } }, [pedido]);
+      const generarNumeroPedido = async () => { try { const response = await fetch(`${API_URL}/generar-numero`); const data = await response.json(); setForm(prev => ({ ...prev, numeroPedido: data.numeroPedido })); } catch (error) { setForm(prev => ({ ...prev, numeroPedido: `PED-${Date.now()}` })); } };
+      const esEmailValido = (email) => { if (!email) return false; const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; return regex.test(email); };
+      const handleClienteBlur = async (e) => { const nombreNormalizado = normalizarTexto(e.target.value); setForm(prev => ({ ...prev, nombreCliente: nombreNormalizado })); if (!nombreNormalizado || pedido) return; if (form.emailCliente) return; try { const response = await fetch(`${API_URL}/buscar-cliente-data?nombre=${nombreNormalizado}`); if (response.ok) { const data = await response.json(); setForm(prev => ({ ...prev, emailCliente: data.emailCliente, telefonoCliente: data.telefonoCliente })); setEmailError(''); } } catch (error) { console.error('Error al buscar cliente:', error); } };
+      const handleEmailBlur = (e) => { const email = e.target.value; if (!esEmailValido(email) && email.length > 0) { setEmailError('El formato del email no es válido'); } else { setEmailError(''); } };
+      const handleSubmit = async (e) => { e.preventDefault(); if (!esEmailValido(form.emailCliente)) { setEmailError('El formato del email no es válido'); return; } const formParaEnviar = { ...form, nombreCliente: normalizarTexto(form.nombreCliente) }; try { const method = pedido ? 'PUT' : 'POST'; const url = pedido ? `${API_URL}/${pedido.id}` : API_URL; const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formParaEnviar) }); if (response.ok) { onGuardar(); onCerrar(); } else { alert('Error al guardar el pedido'); } } catch (error) { console.error('Error:', error); alert('Error al guardar el pedido'); } };
+      const agregarItem = () => setForm(prev => ({ ...prev, items: [...(prev.items || []), { nombreProducto: '', descripcion: '', cantidad: 1, precioUnitario: 0 }] }));
+      const actualizarItem = (index, campo, valor) => setForm(prev => ({ ...prev, items: prev.items.map((item, i) => i === index ? { ...item, [campo]: valor } : item) }));
+      const eliminarItem = (index) => setForm(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== index) }));
+      return ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"> <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"> <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center"> <h2 className="text-2xl font-bold text-gray-800">{pedido ? 'Editar Pedido' : 'Nuevo Pedido'}</h2> <button onClick={onCerrar} className="p-2 hover:bg-gray-100 rounded-lg"><X /></button> </div> <form onSubmit={handleSubmit} className="p-6 space-y-6"> <div className="grid grid-cols-2 gap-4"> <div><label className="block text-sm font-semibold text-gray-700 mb-2">Número de Pedido</label><input type="text" required value={form.numeroPedido} onChange={(e) => setForm({...form, numeroPedido: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" /></div> <div><label className="block text-sm font-semibold text-gray-700 mb-2">Estado</label><select value={form.estado} onChange={(e) => setForm({...form, estado: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">{Object.entries(ESTADOS).map(([key, val]) => (<option key={key} value={key}>{val.label}</option>))}</select></div> <div><label className="block text-sm font-semibold text-gray-700 mb-2">Nombre del Cliente *</label> <input type="text" required value={form.nombreCliente} onChange={(e) => setForm({...form, nombreCliente: e.target.value})} onBlur={handleClienteBlur} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" /></div> <div><label className="block text-sm font-semibold text-gray-700 mb-2">Email *</label> <input type="email" required value={form.emailCliente} onChange={(e) => setForm({...form, emailCliente: e.target.value})} onBlur={handleEmailBlur} className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${emailError ? 'border-red-500 focus:ring-red-500' : 'focus:ring-indigo-500'}`} /> {emailError && (<p className="text-red-500 text-sm mt-1">{emailError}</p>)} </div> <div className="col-span-2"><label className="block text-sm font-semibold text-gray-700 mb-2">Teléfono *</label><input type="tel" required value={form.telefonoCliente} onChange={(e) => setForm({...form, telefonoCliente: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" /></div> <div className="col-span-2"><label className="block text-sm font-semibold text-gray-700 mb-2">Observaciones</label><textarea value={form.observaciones} onChange={(e) => setForm({...form, observaciones: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" rows="3" /></div> </div> <div className="border-t pt-6"> <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-gray-800">Items del Pedido</h3><button type="button" onClick={agregarItem} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"><Plus /> Agregar Item</button></div> <div className="space-y-4"> {form.items?.map((item, index) => ( <div key={index} className="bg-gray-50 p-4 rounded-lg"> <div className="grid grid-cols-2 gap-3 mb-3"> <input type="text" placeholder="Nombre del producto *" required value={item.nombreProducto} onChange={(e) => actualizarItem(index, 'nombreProducto', e.target.value)} className="px-3 py-2 border rounded-lg" /> <input type="text" placeholder="Descripción *" required value={item.descripcion} onChange={(e) => actualizarItem(index, 'descripcion', e.target.value)} className="px-3 py-2 border rounded-lg" /> <input type="number" placeholder="Cantidad *" required min="1" value={item.cantidad} onChange={(e) => actualizarItem(index, 'cantidad', parseInt(e.target.value))} className="px-3 py-2 border rounded-lg" /> <input type="number" placeholder="Precio unitario *" required min="0.01" step="0.01" value={item.precioUnitario} onChange={(e) => actualizarItem(index, 'precioUnitario', parseFloat(e.target.value))} className="px-3 py-2 border rounded-lg" /> </div> <div className="flex justify-between items-center"><span className="text-sm font-semibold text-gray-700">Subtotal: ${(item.cantidad * item.precioUnitario || 0).toFixed(2)}</span><button type="button" onClick={() => eliminarItem(index)} className="text-red-500 hover:text-red-700"><Trash2 /></button></div> </div> ))} </div> </div> <div className="flex justify-end gap-3 pt-6 border-t"><button type="button" onClick={onCerrar} className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button><button type="submit" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">{pedido ? 'Actualizar' : 'Crear'} Pedido</button></div> </form> </div> </div> );
+    }
+
+    // --- Componente ModalPago ---
+    function ModalPago({ pedido, onCerrar, onGuardarPago }) {
+      const [monto, setMonto] = useState(pedido.deuda); const [metodoPago, setMetodoPago] = useState('EFECTIVO'); const [error, setError] = useState('');
+      const handleSubmit = (e) => { e.preventDefault(); setError(''); if (!monto || monto <= 0) { setError('El monto debe ser mayor a 0'); return; } if (monto > pedido.deuda + 0.01) { setError('El monto no puede ser mayor a la deuda restante'); return; } onGuardarPago(pedido.id, { monto: monto, metodoPago: metodoPago }); };
+      return ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"> <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full"> <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center"> <h2 className="text-2xl font-bold text-gray-800">Registrar Pago</h2> <button onClick={onCerrar} className="p-2 hover:bg-gray-100 rounded-lg"><X /></button> </div> <form onSubmit={handleSubmit} className="p-6 space-y-6"> <div> <p className="text-sm text-gray-600">Pedido N°:</p><h3 className="text-lg font-bold">{pedido.numeroPedido}</h3> <p className="text-sm text-gray-600">Cliente:</p><h3 className="text-lg font-bold">{pedido.nombreCliente}</h3> <p className="mt-2 text-sm text-gray-600">Deuda actual:</p><h3 className="text-2xl font-bold text-red-600">${(pedido.deuda ?? 0).toFixed(2)}</h3> </div> <div className="border-t pt-4 space-y-4"> <div><label className="block text-sm font-semibold text-gray-700 mb-2">Monto a Pagar *</label><input type="number" step="0.01" min="0.01" max={pedido.deuda} value={monto} onChange={(e) => setMonto(parseFloat(e.target.value))} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" required /></div> <div><label className="block text-sm font-semibold text-gray-700 mb-2">Método de Pago *</label><select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">{Object.entries(METODOS_PAGO).map(([key, label]) => (<option key={key} value={key}>{label}</option>))}</select></div> </div> {error && (<p className="text-red-500 text-sm">{error}</p>)} <div className="flex justify-end gap-3 pt-6 border-t"> <button type="button" onClick={onCerrar} className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button> <button type="submit" className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold">Registrar Pago</button> </div> </form> </div> </div> );
+    }
+
+    // === FIN DE TU CÓDIGO ===
+
+    // ¡¡IMPORTANTE!! Corrector del "Pantallazo Blanco"
+    window.onload = () => {
+      const domNode = document.getElementById('root');
+      const root = ReactDOM.createRoot(domNode);
+      root.render(<GestorPedidos />);
+    };
+
+</script>
+</body>
+</html>
