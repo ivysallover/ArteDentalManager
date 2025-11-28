@@ -98,7 +98,7 @@ public class Pedido {
 
     public List<Pago> getPagos() { return pagos; }
     public void setPagos(List<Pago> pagos) { this.pagos = pagos; }
-    public Double getDeuda() { /* ... (sin cambios) ... */
+    public Double getDeuda() {
         double totalPagado = pagos.stream().mapToDouble(Pago::getMonto).sum();
         double totalPedido = (this.total == null) ? 0.0 : this.total;
         return totalPedido - totalPagado;

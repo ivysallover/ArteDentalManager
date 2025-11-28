@@ -17,19 +17,15 @@
 
 <script type="text/babel">
 
-    // === INICIO DEL CÓDIGO ===
 
-    // Iconos
     const X = () => '❌'; const Plus = () => '➕'; const Edit2 = () => '✏️'; const Trash2 = () => '🗑️'; const Search = () => '🔍'; const Package = () => '📦'; const Clock = () => '🕒'; const CheckCircle = () => '✅'; const XCircle = () => '❌'; const Money = () => '💵'; const UserIcon = () => '👤'; const ChartIcon = () => '📊'; const ListIcon = () => '📋';
 
     const { useState, useEffect, useRef } = React;
     const API_URL = 'http://localhost:8080/api/pedidos';
 
-    // Constantes
     const ESTADOS = { PENDIENTE: { label: 'Pendiente', color: 'bg-yellow-500', icon: Clock }, EN_PROCESO: { label: 'En Proceso', color: 'bg-blue-500', icon: Package }, COMPLETADO: { label: 'Completado', color: 'bg-green-500', icon: CheckCircle }, CANCELADO: { label: 'Cancelado', color: 'bg-red-500', icon: XCircle } };
     const METODOS_PAGO = { EFECTIVO: "Efectivo", TRANSFERENCIA: "Transferencia", TARJETA_DEBITO: "Tarjeta de Débito", TARJETA_CREDITO: "Tarjeta de Crédito", OTRO: "Otro" };
 
-    // --- Funciones "Ayudante" ---
     function normalizarTexto(texto) { if (!texto) return ''; return texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim(); }
     function formatarFecha(fechaString) { if (!fechaString) return 'N/A'; return new Date(fechaString).toLocaleString('es-AR', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
 
@@ -52,7 +48,6 @@
         return { inicio: inicioISO, fin: finISO };
     }
 
-    // --- Componentes de UI ---
 
     function BotonPestaña({ titulo, icono, activo, onClick }) {
       const Icono = icono; const clasesBase = "py-4 px-6 font-semibold text-lg cursor-pointer transition-colors flex items-center gap-2"; const clasesActivo = "border-b-4 border-indigo-600 text-indigo-600"; const clasesInactivo = "text-gray-500 hover:text-gray-800 border-b-4 border-transparent";
@@ -70,7 +65,6 @@
         );
     }
 
-    // --- Componente de Gráfico (Ventas por Mes) ---
     function GraficoDeBarras({ datos, titulo }) {
       const canvasRef = useRef(null);
       const chartRef = useRef(null);
@@ -125,7 +119,6 @@
       );
     }
 
-    // --- Gráfico de Ranking de Clientes (Horizontal) ---
     function GraficoClientes({ datos }) {
       const canvasRef = useRef(null);
       const chartRef = useRef(null);
@@ -146,13 +139,13 @@
               datasets: [{
                 label: 'Facturación Total',
                 data: valores,
-                backgroundColor: 'rgba(239, 68, 68, 0.7)', // Color Rojo
+                backgroundColor: 'rgba(239, 68, 68, 0.7)',
                 borderColor: 'rgba(239, 68, 68, 1)',
                 borderWidth: 1
               }]
             },
             options: {
-              indexAxis: 'y', // <-- ¡Esto lo hace horizontal!
+              indexAxis: 'y',
               responsive: true,
               scales: { x: { beginAtZero: true, ticks: { callback: function(value) { return '$' + value.toLocaleString('es-AR'); } } } },
               plugins: {
@@ -175,7 +168,6 @@
       );
     }
 
-    // --- VISTA DE ESTADÍSTICAS ---
     function VistaEstadisticas({ rangoFecha }) {
       const [statsMes, setStatsMes] = useState([]);
       const [statsCliente, setStatsCliente] = useState([]);
@@ -325,7 +317,6 @@
       );
     }
 
-    // --- Componente Principal ---
     function GestorPedidos() {
       const [pedidos, setPedidos] = useState([]);
       const [filtro, setFiltro] = useState('');
@@ -336,12 +327,10 @@
       const [modalPago, setModalPago] = useState({ visible: false, pedido: null });
       const [rangoFecha, setRangoFecha] = useState('ESTE_MES');
 
-      // nuevo estado para capturar errores al cargar pedidos
       const [errorCarga, setErrorCarga] = useState('');
 
       useEffect(() => { cargarPedidos(); }, []);
 
-      // === versión robusta de cargarPedidos() ===
       const cargarPedidos = async () => {
         setCargando(true);
         setErrorCarga('');
@@ -350,12 +339,11 @@
 
           if (!response.ok) {
             console.warn("⚠️ Backend responded with status:", response.status);
-            // leer body si es JSON para información extra (no obligatorio)
             try {
               const errBody = await response.json().catch(()=>null);
               if (errBody) console.warn("Backend body:", errBody);
             } catch(e) {}
-            setPedidos([]); // garantizar que sea array
+            setPedidos([]);
             setErrorCarga(`No se pudo cargar pedidos (HTTP ${response.status}).`);
             return;
           }
@@ -397,7 +385,6 @@
         return cumpleFiltroNombre || cumpleFiltroNumero;
       }) : [];
 
-      // CORRECCIÓN en agrupamiento: usar 'pedido' en vez de 'p'
       const pedidosAgrupados = pedidosFiltrados.reduce((grupos, pedido) => {
         const cliente = pedido.nombreCliente || 'Sin Nombre';
         if (!grupos[cliente]) { grupos[cliente] = { pedidos: [], deudaTotalCliente: 0 }; }
@@ -438,7 +425,6 @@
                     </button>
                   </div>
 
-                  {/* Mostrar error de carga si existe */}
                   {errorCarga && (
                     <div className="mt-4 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg">
                       <strong>⚠️ Error cargando pedidos:</strong> {errorCarga}
@@ -492,14 +478,12 @@
       );
     }
 
-    // --- Componente TarjetaPedido (¡CORREGIDO!) ---
     function TarjetaPedido({ pedido, onEditar, onEliminar, onCambiarEstado, onAbrirPago }) {
       const estadoInfo = ESTADOS[pedido.estado] || ESTADOS.PENDIENTE;
       const IconoEstado = estadoInfo.icon; const deuda = pedido.deuda ?? 0;
       return ( <div className="bg-white rounded-xl shadow-lg p-5 hover:shadow-2xl transition-shadow"> <div className="flex items-start justify-between"> <div className="flex-1"> <div className="flex items-center gap-3 mb-2"> <h3 className="text-lg font-bold text-gray-800">{pedido.numeroPedido}</h3> <span className={`${estadoInfo.color} text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1`}> <IconoEstado /> {estadoInfo.label} </span> </div> <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-sm"> <div><p className="text-gray-600">Fecha</p><p className="font-semibold text-gray-800">{formatarFecha(pedido.fechaPedido)}</p></div> <div className="col-span-2 md:col-span-1"> <p className="text-gray-600">Email</p> <a href={`mailto:${pedido.emailCliente}`} className="font-semibold text-blue-600 hover:underline truncate block"> {pedido.emailCliente} </a> </div> <div><p className="text-gray-600">Teléfono</p><p className="font-semibold text-gray-800">{pedido.telefonoCliente}</p></div> <div className="font-bold col-span-2 md:col-span-1"> <p className="text-gray-600">Deuda del Pedido</p> <p className={`text-lg ${deuda > 0.01 ? 'text-red-600' : 'text-green-600'}`}>${deuda.toFixed(2)}</p> </div> </div> {pedido.items && pedido.items.length > 0 && ( <div className="mt-3 pt-3 border-t"> <p className="text-gray-600 text-sm mb-1">Items ({pedido.items.length})</p> <div className="space-y-1">{pedido.items.map((item, idx) => (<p key={idx} className="text-xs text-gray-700">• {item.nombreProducto} ({item.cantidad}x)</p>))}</div> </div> )} {pedido.pagos && pedido.pagos.length > 0 && ( <div className="mt-3 pt-3 border-t"> <p className="text-gray-600 text-sm mb-1">Pagos ({pedido.pagos.length})</p> <div className="space-y-1">{pedido.pagos.map((pago) => (<p key={pago.id} className="text-xs text-green-700">• ${(pago.monto ?? 0).toFixed(2)}<span className="text-gray-500"> ({METODOS_PAGO[pago.metodoPago]})</span></p>))}</div> </div> )} </div> <div className="flex flex-col gap-2 ml-4"> <button onClick={onAbrirPago} className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex justify-center items-center gap-1 text-sm"><Money /> Pagar</button> <button onClick={onEditar} className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex justify-center"><Edit2 /></button> <button onClick={onEliminar} className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex justify-center"><Trash2 /></button> </div> </div> </div> );
     }
 
-    // --- Componente ModalPedido ---
     function ModalPedido({ pedido, onCerrar, onGuardar }) {
       const [form, setForm] = useState(() => { if (pedido) return pedido; return { numeroPedido: '', nombreCliente: '', emailCliente: '', telefonoCliente: '', estado: 'PENDIENTE', observaciones: '', items: [] }; });
       const [emailError, setEmailError] = useState('');
@@ -515,16 +499,13 @@
       return ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"> <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"> <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center"> <h2 className="text-2xl font-bold text-gray-800">{pedido ? 'Editar Pedido' : 'Nuevo Pedido'}</h2> <button onClick={onCerrar} className="p-2 hover:bg-gray-100 rounded-lg"><X /></button> </div> <form onSubmit={handleSubmit} className="p-6 space-y-6"> <div className="grid grid-cols-2 gap-4"> <div><label className="block text-sm font-semibold text-gray-700 mb-2">Número de Pedido</label><input type="text" required value={form.numeroPedido} onChange={(e) => setForm({...form, numeroPedido: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" /></div> <div><label className="block text-sm font-semibold text-gray-700 mb-2">Estado</label><select value={form.estado} onChange={(e) => setForm({...form, estado: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">{Object.entries(ESTADOS).map(([key, val]) => (<option key={key} value={key}>{val.label}</option>))}</select></div> <div><label className="block text-sm font-semibold text-gray-700 mb-2">Nombre del Cliente *</label> <input type="text" required value={form.nombreCliente} onChange={(e) => setForm({...form, nombreCliente: e.target.value})} onBlur={handleClienteBlur} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" /></div> <div><label className="block text-sm font-semibold text-gray-700 mb-2">Email *</label> <input type="email" required value={form.emailCliente} onChange={(e) => setForm({...form, emailCliente: e.target.value})} onBlur={handleEmailBlur} className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${emailError ? 'border-red-500 focus:ring-red-500' : 'focus:ring-indigo-500'}`} /> {emailError && (<p className="text-red-500 text-sm mt-1">{emailError}</p>)} </div> <div className="col-span-2"><label className="block text-sm font-semibold text-gray-700 mb-2">Teléfono *</label><input type="tel" required value={form.telefonoCliente} onChange={(e) => setForm({...form, telefonoCliente: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" /></div> <div className="col-span-2"><label className="block text-sm font-semibold text-gray-700 mb-2">Observaciones</label><textarea value={form.observaciones} onChange={(e) => setForm({...form, observaciones: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" rows="3" /></div> </div> <div className="border-t pt-6"> <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-gray-800">Items del Pedido</h3><button type="button" onClick={agregarItem} className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"><Plus /> Agregar Item</button></div> <div className="space-y-4"> {form.items?.map((item, index) => ( <div key={index} className="bg-gray-50 p-4 rounded-lg"> <div className="grid grid-cols-2 gap-3 mb-3"> <input type="text" placeholder="Nombre del producto *" required value={item.nombreProducto} onChange={(e) => actualizarItem(index, 'nombreProducto', e.target.value)} className="px-3 py-2 border rounded-lg" /> <input type="text" placeholder="Descripción *" required value={item.descripcion} onChange={(e) => actualizarItem(index, 'descripcion', e.target.value)} className="px-3 py-2 border rounded-lg" /> <input type="number" placeholder="Cantidad *" required min="1" value={item.cantidad} onChange={(e) => actualizarItem(index, 'cantidad', parseInt(e.target.value))} className="px-3 py-2 border rounded-lg" /> <input type="number" placeholder="Precio unitario *" required min="0.01" step="0.01" value={item.precioUnitario} onChange={(e) => actualizarItem(index, 'precioUnitario', parseFloat(e.target.value))} className="px-3 py-2 border rounded-lg" /> </div> <div className="flex justify-between items-center"><span className="text-sm font-semibold text-gray-700">Subtotal: ${(item.cantidad * item.precioUnitario || 0).toFixed(2)}</span><button type="button" onClick={() => eliminarItem(index)} className="text-red-500 hover:text-red-700"><Trash2 /></button></div> </div> ))} </div> </div> <div className="flex justify-end gap-3 pt-6 border-t"><button type="button" onClick={onCerrar} className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button><button type="submit" className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">{pedido ? 'Actualizar' : 'Crear'} Pedido</button></div> </form> </div> </div> );
     }
 
-    // --- Componente ModalPago ---
     function ModalPago({ pedido, onCerrar, onGuardarPago }) {
       const [monto, setMonto] = useState(pedido.deuda); const [metodoPago, setMetodoPago] = useState('EFECTIVO'); const [error, setError] = useState('');
       const handleSubmit = (e) => { e.preventDefault(); setError(''); if (!monto || monto <= 0) { setError('El monto debe ser mayor a 0'); return; } if (monto > pedido.deuda + 0.01) { setError('El monto no puede ser mayor a la deuda restante'); return; } onGuardarPago(pedido.id, { monto: monto, metodoPago: metodoPago }); };
       return ( <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"> <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full"> <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center"> <h2 className="text-2xl font-bold text-gray-800">Registrar Pago</h2> <button onClick={onCerrar} className="p-2 hover:bg-gray-100 rounded-lg"><X /></button> </div> <form onSubmit={handleSubmit} className="p-6 space-y-6"> <div> <p className="text-sm text-gray-600">Pedido N°:</p><h3 className="text-lg font-bold">{pedido.numeroPedido}</h3> <p className="text-sm text-gray-600">Cliente:</p><h3 className="text-lg font-bold">{pedido.nombreCliente}</h3> <p className="mt-2 text-sm text-gray-600">Deuda actual:</p><h3 className="text-2xl font-bold text-red-600">${(pedido.deuda ?? 0).toFixed(2)}</h3> </div> <div className="border-t pt-4 space-y-4"> <div><label className="block text-sm font-semibold text-gray-700 mb-2">Monto a Pagar *</label><input type="number" step="0.01" min="0.01" max={pedido.deuda} value={monto} onChange={(e) => setMonto(parseFloat(e.target.value))} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" required /></div> <div><label className="block text-sm font-semibold text-gray-700 mb-2">Método de Pago *</label><select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">{Object.entries(METODOS_PAGO).map(([key, label]) => (<option key={key} value={key}>{label}</option>))}</select></div> </div> {error && (<p className="text-red-500 text-sm">{error}</p>)} <div className="flex justify-end gap-3 pt-6 border-t"> <button type="button" onClick={onCerrar} className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button> <button type="submit" className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold">Registrar Pago</button> </div> </form> </div> </div> );
     }
 
-    // === FIN DE TU CÓDIGO ===
 
-    // ¡¡IMPORTANTE!! Corrector del "Pantallazo Blanco"
     window.onload = () => {
       const domNode = document.getElementById('root');
       const root = ReactDOM.createRoot(domNode);

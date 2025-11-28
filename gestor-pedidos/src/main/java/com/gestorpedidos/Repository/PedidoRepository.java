@@ -29,7 +29,6 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     Optional<Pedido> findFirstByNombreClienteContainingIgnoreCaseOrderByFechaPedidoDesc(String nombre);
 
 
-    //Consulta 1: Estadísticas mensuales
     @Query("SELECT new com.gestorpedidos.Dto.EstadisticaMensualDTO(TO_CHAR(p.fechaPedido, 'YYYY-MM'), SUM(p.total)) " +
             "FROM Pedido p " +
             "WHERE p.estado = 'COMPLETADO' " +
@@ -38,7 +37,6 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
             "ORDER BY TO_CHAR(p.fechaPedido, 'YYYY-MM') DESC")
     List<EstadisticaMensualDTO> findEstadisticasMensuales(@Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
 
-     //Consulta 2: Estadísticas por cliente
     @Query("SELECT new com.gestorpedidos.Dto.EstadisticaClienteDTO(p.nombreCliente, SUM(p.total), COUNT(p)) " +
             "FROM Pedido p " +
             "WHERE p.estado = 'COMPLETADO' " +

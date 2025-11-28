@@ -1,6 +1,6 @@
 package com.gestorpedidos.Model;
 
-public enum EstadoPedido { /* ... (sin cambios) ... */
+public enum EstadoPedido {
     PENDIENTE,
     EN_PROCESO,
     COMPLETADO,
